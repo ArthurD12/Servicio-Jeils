@@ -1,4 +1,5 @@
 """Orquestador Core. Spec: specs/03-normalizador-orquestador.md (Integrante 3)."""
+
 import asyncio
 import logging
 
@@ -9,8 +10,8 @@ from jeils.normalizer import normalizar
 
 log = logging.getLogger(__name__)
 
-# Margen sobre el timeout HTTP: el adaptador puede reintentar (constitución §5).
-_FACTOR_ESPERA = 3
+# La primera consulta de SENAMHI descarga y procesa ~48 MB (~17 s). Después queda en caché.
+_FACTOR_ESPERA = 10
 
 
 async def _con_limite(nombre: str, coro, limite: float):
@@ -33,7 +34,9 @@ async def evaluar_locacion(
     consultar_senace = consultar_senace or senace.consultar
     limite = limite_segundos or get_settings().http_timeout_seconds * _FACTOR_ESPERA
     r_senamhi, r_senace = await asyncio.gather(
-        _con_limite("SENAMHI", consultar_senamhi(req.locacion, req.fecha_evento), limite),
+        _con_limite(
+            "SENAMHI", consultar_senamhi(req.locacion, req.fecha_evento), limite
+        ),
         _con_limite("SENACE", consultar_senace(req.locacion), limite),
         return_exceptions=True,
     )
