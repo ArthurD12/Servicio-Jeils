@@ -5,6 +5,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Jeils · Evaluación de locación</title>
+  <!-- Leaflet CSS para el mapa interactivo -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     :root {
       --primary: #1e40af;
@@ -89,6 +91,12 @@
       font-weight: 600;
     }
 
+    .hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
     input {
       padding: 0.55rem 0.75rem;
       border: 1px solid var(--border);
@@ -96,7 +104,42 @@
       font-size: 0.95rem;
     }
 
-    button {
+    /* Mapa interactivo */
+    .map-wrapper {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      margin-top: 0.25rem;
+    }
+
+    #map {
+      height: 230px;
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      z-index: 1;
+    }
+
+    .map-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .btn-link {
+      background: none;
+      border: none;
+      color: var(--primary);
+      padding: 0;
+      font-size: 0.82rem;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .btn-submit {
       background: var(--primary);
       color: white;
       border: none;
@@ -105,13 +148,14 @@
       font-weight: 600;
       cursor: pointer;
       font-size: 0.95rem;
+      grid-column: 1 / -1;
     }
 
-    button:hover {
+    .btn-submit:hover {
       opacity: 0.92;
     }
 
-    button:disabled {
+    .btn-submit:disabled {
       opacity: 0.6;
       cursor: not-allowed;
     }
@@ -246,7 +290,25 @@
           <label for="fecha">Fecha del evento</label>
           <input type="date" id="fecha" name="fecha" required>
         </div>
-        <button type="submit" id="submit-btn">Evaluar</button>
+        <div class="field">
+          <label for="latitud">Latitud <span class="hint">(opcional)</span></label>
+          <input type="number" step="any" min="-90" max="90" id="latitud" name="latitud" placeholder="Ej. -12.1191">
+        </div>
+        <div class="field">
+          <label for="longitud">Longitud <span class="hint">(opcional)</span></label>
+          <input type="number" step="any" min="-180" max="180" id="longitud" name="longitud" placeholder="Ej. -77.0349">
+        </div>
+
+        <!-- Mapa interactivo Leaflet -->
+        <div class="map-wrapper">
+          <div class="map-actions">
+            <span>Haz clic en el mapa para seleccionar coordenadas exactas:</span>
+            <button type="button" id="clear-coords" class="btn-link">Limpiar coordenadas</button>
+          </div>
+          <div id="map"></div>
+        </div>
+
+        <button type="submit" id="submit-btn" class="btn-submit">Evaluar</button>
       </form>
     </section>
 
@@ -299,12 +361,64 @@
     </section>
   </div>
 
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const form = document.getElementById('f');
     const submitBtn = document.getElementById('submit-btn');
     const estado = document.getElementById('estado');
     const resultsSection = document.getElementById('results-section');
     const avisosContainer = document.getElementById('avisos');
+    const latInput = document.getElementById('latitud');
+    const lonInput = document.getElementById('longitud');
+
+    // Inicializar mapa centrado en Perú
+    const map = L.map('map').setView([-9.19, -75.0152], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    let marker = null;
+
+    function actualizarMarcador(lat, lng) {
+      if (marker) {
+        marker.setLatLng([lat, lng]);
+      } else {
+        marker = L.marker([lat, lng]).addTo(map);
+      }
+    }
+
+    // Clic en el mapa -> actualiza inputs
+    map.on('click', (e) => {
+      const lat = Number(e.latlng.lat.toFixed(5));
+      const lng = Number(e.latlng.lng.toFixed(5));
+      latInput.value = lat;
+      lonInput.value = lng;
+      actualizarMarcador(lat, lng);
+    });
+
+    // Escribir manualmente -> mueve marcador en el mapa
+    function sincronizarDesdeInputs() {
+      const lat = parseFloat(latInput.value);
+      const lng = parseFloat(lonInput.value);
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        actualizarMarcador(lat, lng);
+        map.setView([lat, lng], Math.max(map.getZoom(), 9));
+      }
+    }
+
+    latInput.addEventListener('change', sincronizarDesdeInputs);
+    lonInput.addEventListener('change', sincronizarDesdeInputs);
+
+    // Botón para limpiar coordenadas
+    document.getElementById('clear-coords').addEventListener('click', () => {
+      latInput.value = '';
+      lonInput.value = '';
+      if (marker) {
+        map.removeLayer(marker);
+        marker = null;
+      }
+    });
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -317,11 +431,16 @@
       submitBtn.disabled = true;
 
       const d = Object.fromEntries(new FormData(e.target));
+      const latVal = d.latitud !== "" ? parseFloat(d.latitud) : null;
+      const lonVal = d.longitud !== "" ? parseFloat(d.longitud) : null;
+
       const body = {
         locacion: {
           departamento: d.departamento,
           provincia: d.provincia || null,
-          distrito: d.distrito || null
+          distrito: d.distrito || null,
+          latitud: latVal,
+          longitud: lonVal
         },
         fecha_evento: d.fecha
       };
@@ -389,10 +508,10 @@
         proyectos.forEach(p => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>${p.titulo || '-'}</td>
+            <td>${p.titulo_proyecto || '-'}</td>
             <td>${p.titular || '-'}</td>
             <td><span class="badge">${p.estado || '-'}</span></td>
-            <td>${p.fecha || '-'}</td>
+            <td>${p.fecha_inicio || '-'}</td>
           `;
           tbody.appendChild(tr);
         });
