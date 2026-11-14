@@ -1,5 +1,4 @@
 """Orquestador Core. Spec: specs/03-normalizador-orquestador.md (Integrante 3)."""
-
 import asyncio
 import logging
 
@@ -24,16 +23,17 @@ async def _con_limite(nombre: str, coro, limite: float):
 
 async def evaluar_locacion(
     req: EvaluacionRequest,
-    consultar_senamhi=senamhi.consultar,
-    consultar_senace=senace.consultar,
+    consultar_senamhi=None,
+    consultar_senace=None,
     limite_segundos: float | None = None,
 ) -> EvaluacionResponse:
     """Llama a ambos adaptadores en paralelo; una fuente caída no cancela la otra (RF-1, RF-3, RF-4)."""
+    # Se resuelven al momento de la llamada (no al importar) para poder simularlos en pruebas.
+    consultar_senamhi = consultar_senamhi or senamhi.consultar
+    consultar_senace = consultar_senace or senace.consultar
     limite = limite_segundos or get_settings().http_timeout_seconds * _FACTOR_ESPERA
     r_senamhi, r_senace = await asyncio.gather(
-        _con_limite(
-            "SENAMHI", consultar_senamhi(req.locacion, req.fecha_evento), limite
-        ),
+        _con_limite("SENAMHI", consultar_senamhi(req.locacion, req.fecha_evento), limite),
         _con_limite("SENACE", consultar_senace(req.locacion), limite),
         return_exceptions=True,
     )
