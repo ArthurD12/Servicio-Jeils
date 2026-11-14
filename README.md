@@ -15,11 +15,11 @@ Cualquier IA (OpenCode, Claude Code, Cursor, Copilot...) debe seguir [`AGENTS.md
 ## Reparto de módulos
 | # | Módulo | Spec | Archivos | Responsable |
 |---|---|---|---|---|
-| 1 | Adaptador SENAMHI | [01](specs/01-adaptador-senamhi.md) | `jeils/adapters/senamhi.py` | _por asignar_ |
-| 2 | Adaptador SENACE | [02](specs/02-adaptador-senace.md) | `jeils/adapters/senace.py` | _por asignar_ |
-| 3 | Normalizador + Orquestador | [03](specs/03-normalizador-orquestador.md) | `jeils/normalizer.py`, `jeils/orchestrator.py` | _por asignar_ |
-| 4 | Gateway + Caché | [04](specs/04-gateway-cache.md) | `jeils/gateway.py`, `jeils/cache.py` | _por asignar_ |
-| 5 | Frontend | [05](specs/05-frontend.md) | `frontend/` | _por asignar_ |
+| 1 | Adaptador SENAMHI | [01](specs/01-adaptador-senamhi.md) | `jeils/adapters/senamhi.py` | CARHUATANTA VÉLEZ Luis Joaquín |
+| 2 | Adaptador SENACE | [02](specs/02-adaptador-senace.md) | `jeils/adapters/senace.py` | MENÉNDEZ REINOSO Oscar Sebastian |
+| 3 | Normalizador + Orquestador | [03](specs/03-normalizador-orquestador.md) | `jeils/normalizer.py`, `jeils/orchestrator.py` | CANAZA HUAYTA Harold Jhampier |
+| 4 | Gateway + Caché | [04](specs/04-gateway-cache.md) | `jeils/gateway.py`, `jeils/cache.py` | LLOCLLA CASTILLO Bella Maria Adelaida |
+| 5 | Frontend | [05](specs/05-frontend.md) | `frontend/` | BRAÑEZ REYNOSO Delvis Damian |
 
 ## Arquitectura
 ```

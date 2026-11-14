@@ -19,6 +19,15 @@ class Settings(BaseSettings):
     max_station_distance_km: float = 100.0
     cors_origins: list[str] = ["*"]  # TODO(equipo): restringir en producción
 
+    # Configuración del Gateway
+    rate_limit_requests: int = 30
+    rate_limit_window_seconds: int = 60
+
+    # JWT opcional durante el desarrollo
+    jwt_required: bool = False
+    jwt_secret: str = ""
+
+
 
 @lru_cache
 def get_settings() -> Settings:
