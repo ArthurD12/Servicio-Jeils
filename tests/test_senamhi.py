@@ -1,5 +1,5 @@
 
-"""Pruebas del Adaptador SENAMHI."""
+"""Pruebas SENAMHI."""
 import pytest
 from datetime import date
 from jeils.contracts import Locacion
