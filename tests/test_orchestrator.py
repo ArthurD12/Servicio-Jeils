@@ -12,15 +12,11 @@ from jeils.contracts import (
     ResultadoSenamhi,
 )
 
-from jeils.contracts import (
-    EvaluacionRequest,
-    FuenteNoDisponible,
-    ResultadoSenace,
-    ResultadoSenamhi,
-)
 from jeils.orchestrator import evaluar_locacion
 
-REQ = EvaluacionRequest(locacion=Locacion(departamento="Lima"), fecha_evento=date(2026, 12, 20))
+REQ = EvaluacionRequest(
+    locacion=Locacion(departamento="Lima"), fecha_evento=date(2026, 12, 20)
+)
 
 
 async def ok_senamhi(loc, fecha):
