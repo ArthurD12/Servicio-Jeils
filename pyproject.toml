@@ -23,3 +23,5 @@ include = ["jeils*"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+addopts = "-m 'not integration'"
+markers = ["integration: pruebas con datos reales (usan internet), no corren por defecto"]
