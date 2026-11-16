@@ -1,49 +1,535 @@
-<!doctype html>
 <html lang="es">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Jeils · Evaluación de locación</title>
+  <!-- Leaflet CSS para el mapa interactivo -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
-    label { display: block; margin-top: .75rem; }
-    input, button { padding: .5rem; font-size: 1rem; }
-    .aviso { background: #fff3cd; padding: .5rem; margin-top: .5rem; border-radius: 4px; }
-    pre { background: #f4f4f4; padding: 1rem; overflow: auto; }
+    :root {
+      --primary: #1e40af;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #cbd5e1;
+      --warn-bg: #fef3c7;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --err-bg: #fee2e2;
+      --err-text: #991b1b;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 2rem 1rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 850px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    }
+
+    h1 {
+      margin: 0 0 0.25rem 0;
+      font-size: 1.6rem;
+    }
+
+    h2 {
+      margin: 0 0 1rem 0;
+      font-size: 1.2rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+
+    /* Leyenda obligatoria siempre visible */
+    .disclaimer {
+      background: #e2e8f0;
+      color: #334155;
+      padding: 0.6rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-style: italic;
+      font-weight: 500;
+      margin-bottom: 1.25rem;
+    }
+
+    /* Formulario */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      align-items: end;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    label {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    input {
+      padding: 0.55rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+
+    /* Mapa interactivo */
+    .map-wrapper {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      margin-top: 0.25rem;
+    }
+
+    #map {
+      height: 230px;
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      z-index: 1;
+    }
+
+    .map-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .btn-link {
+      background: none;
+      border: none;
+      color: var(--primary);
+      padding: 0;
+      font-size: 0.82rem;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .btn-submit {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.65rem 1.25rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.95rem;
+      grid-column: 1 / -1;
+    }
+
+    .btn-submit:hover {
+      opacity: 0.92;
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Estados: Carga y Error */
+    .estado-box {
+      font-weight: 600;
+      padding: 1rem;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .estado-loading {
+      color: var(--primary);
+      background: #eff6ff;
+    }
+
+    .estado-error {
+      background: var(--err-bg);
+      color: var(--err-text);
+      border: 1px solid #f87171;
+      text-align: left;
+    }
+
+    /* Advertencias destacadas */
+    .warnings-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .warning-item {
+      background: var(--warn-bg);
+      border-left: 5px solid var(--warn-border);
+      color: var(--warn-text);
+      padding: 0.85rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    /* Tarjetas de Clima */
+    .weather-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .metric-box {
+      background: #f1f5f9;
+      padding: 1rem;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .metric-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .metric-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-top: 0.25rem;
+    }
+
+    .station-info {
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    /* Tabla SENACE */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+      font-size: 0.92rem;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #f1f5f9;
+      font-weight: 600;
+    }
+
+    .badge {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
+
 <body>
-  <h1>Evaluación de locación</h1>
-  <p><em>Datos históricos; no constituyen un pronóstico.</em></p>
-  <form id="f">
-    <label>Departamento <input name="departamento" required></label>
-    <label>Provincia <input name="provincia"></label>
-    <label>Distrito <input name="distrito"></label>
-    <label>Fecha del evento <input type="date" name="fecha" required></label>
-    <p><button>Evaluar</button></p>
-  </form>
-  <div id="estado"></div>
-  <div id="avisos"></div>
-  <pre id="resultado"></pre>
+  <div class="container">
+    <!-- SECCIÓN 1: FORMULARIO -->
+    <section class="card">
+      <h1>Evaluación de locación</h1>
+      <div class="disclaimer">
+        Datos históricos; no constituyen un pronóstico.
+      </div>
+
+      <form id="f" class="form-grid">
+        <div class="field">
+          <label for="departamento">Departamento</label>
+          <input type="text" id="departamento" name="departamento" placeholder="Ej. Lima" required>
+        </div>
+        <div class="field">
+          <label for="provincia">Provincia</label>
+          <input type="text" id="provincia" name="provincia" placeholder="Ej. Lima">
+        </div>
+        <div class="field">
+          <label for="distrito">Distrito</label>
+          <input type="text" id="distrito" name="distrito" placeholder="Ej. Miraflores">
+        </div>
+        <div class="field">
+          <label for="fecha">Fecha del evento</label>
+          <input type="date" id="fecha" name="fecha" required>
+        </div>
+        <div class="field">
+          <label for="latitud">Latitud <span class="hint">(opcional)</span></label>
+          <input type="number" step="any" min="-90" max="90" id="latitud" name="latitud" placeholder="Ej. -12.1191">
+        </div>
+        <div class="field">
+          <label for="longitud">Longitud <span class="hint">(opcional)</span></label>
+          <input type="number" step="any" min="-180" max="180" id="longitud" name="longitud" placeholder="Ej. -77.0349">
+        </div>
+
+        <!-- Mapa interactivo Leaflet -->
+        <div class="map-wrapper">
+          <div class="map-actions">
+            <span>Haz clic en el mapa para seleccionar coordenadas exactas:</span>
+            <button type="button" id="clear-coords" class="btn-link">Limpiar coordenadas</button>
+          </div>
+          <div id="map"></div>
+        </div>
+
+        <button type="submit" id="submit-btn" class="btn-submit">Evaluar</button>
+      </form>
+    </section>
+
+    <!-- INDICADOR DE ESTADO / CARGA / ERROR -->
+    <div id="estado" class="hidden"></div>
+
+    <!-- SECCIÓN 2: VISTA DE RESULTADOS -->
+    <section id="results-section" class="card hidden">
+      <div class="disclaimer">
+        Datos históricos; no constituyen un pronóstico.
+      </div>
+
+      <!-- Advertencias destacadas -->
+      <div id="avisos" class="warnings-list hidden"></div>
+
+      <!-- Clima y Estación -->
+      <h2>Condiciones Meteorológicas Históricas</h2>
+      <div class="weather-grid">
+        <div class="metric-box">
+          <div class="metric-label">Temperatura</div>
+          <div class="metric-value" id="res-temp">-- °C</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">Humedad</div>
+          <div class="metric-value" id="res-hum">-- %</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">Precipitación</div>
+          <div class="metric-value" id="res-precip">-- mm</div>
+        </div>
+      </div>
+      <p class="station-info" id="res-station">Estación utilizada: -- (Distancia: -- km)</p>
+
+      <!-- Proyectos SENACE -->
+      <h2 style="margin-top: 1.5rem;">Proyectos de SENACE en la zona</h2>
+      <div id="senace-unavailable" class="hidden"
+        style="color: var(--warn-text); background: var(--warn-bg); padding: 0.85rem 1rem; border-radius: 6px; font-weight: 600; border-left: 5px solid var(--warn-border); font-size: 0.95rem;">
+        Información de SENACE no disponible; validación ambiental pendiente.
+      </div>
+      <div id="senace-empty" class="hidden" style="color: var(--muted); font-size: 0.95rem;">
+        No se encontraron proyectos registrados para esta ubicación.
+      </div>
+      <table id="senace-table" class="hidden">
+        <thead>
+          <tr>
+            <th>Título</th>
+            <th>Titular</th>
+            <th>Estado</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody id="senace-tbody"></tbody>
+      </table>
+    </section>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // TODO(integrante 5): reemplazar este placeholder por la vista final (spec 05).
-    document.getElementById("f").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const d = Object.fromEntries(new FormData(e.target));
-      const body = { locacion: { departamento: d.departamento, provincia: d.provincia || null, distrito: d.distrito || null }, fecha_evento: d.fecha };
-      const estado = document.getElementById("estado");
-      estado.textContent = "Consultando...";
-      try {
-        const r = await fetch("/api/v1/evaluacion", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-        if (!r.ok) throw new Error("Error " + r.status);
-        const j = await r.json();
-        document.getElementById("avisos").innerHTML = j.advertencias.map(a => `<div class="aviso">${a.replace(/</g, "&lt;")}</div>`).join("");
-        document.getElementById("resultado").textContent = JSON.stringify(j, null, 2);
-        estado.textContent = "";
-      } catch (err) {
-        estado.textContent = "No se pudo completar la consulta: " + err.message;
+    const form = document.getElementById('f');
+    const submitBtn = document.getElementById('submit-btn');
+    const estado = document.getElementById('estado');
+    const resultsSection = document.getElementById('results-section');
+    const avisosContainer = document.getElementById('avisos');
+    const latInput = document.getElementById('latitud');
+    const lonInput = document.getElementById('longitud');
+
+    // Inicializar mapa centrado en Perú
+    const map = L.map('map').setView([-9.19, -75.0152], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    let marker = null;
+
+    function actualizarMarcador(lat, lng) {
+      if (marker) {
+        marker.setLatLng([lat, lng]);
+      } else {
+        marker = L.marker([lat, lng]).addTo(map);
+      }
+    }
+
+    // Clic en el mapa -> actualiza inputs
+    map.on('click', (e) => {
+      const lat = Number(e.latlng.lat.toFixed(5));
+      const lng = Number(e.latlng.lng.toFixed(5));
+      latInput.value = lat;
+      lonInput.value = lng;
+      actualizarMarcador(lat, lng);
+    });
+
+    // Escribir manualmente -> mueve marcador en el mapa
+    function sincronizarDesdeInputs() {
+      const lat = parseFloat(latInput.value);
+      const lng = parseFloat(lonInput.value);
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        actualizarMarcador(lat, lng);
+        map.setView([lat, lng], Math.max(map.getZoom(), 9));
+      }
+    }
+
+    latInput.addEventListener('change', sincronizarDesdeInputs);
+    lonInput.addEventListener('change', sincronizarDesdeInputs);
+
+    // Botón para limpiar coordenadas
+    document.getElementById('clear-coords').addEventListener('click', () => {
+      latInput.value = '';
+      lonInput.value = '';
+      if (marker) {
+        map.removeLayer(marker);
+        marker = null;
       }
     });
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      resultsSection.classList.add('hidden');
+      avisosContainer.classList.add('hidden');
+      estado.className = "estado-box estado-loading";
+      estado.textContent = "Consultando datos meteorológicos y registros de SENACE...";
+      estado.classList.remove('hidden');
+      submitBtn.disabled = true;
+
+      const d = Object.fromEntries(new FormData(e.target));
+      const latVal = d.latitud !== "" ? parseFloat(d.latitud) : null;
+      const lonVal = d.longitud !== "" ? parseFloat(d.longitud) : null;
+
+      const body = {
+        locacion: {
+          departamento: d.departamento,
+          provincia: d.provincia || null,
+          distrito: d.distrito || null,
+          latitud: latVal,
+          longitud: lonVal
+        },
+        fecha_evento: d.fecha
+      };
+
+      try {
+        const r = await fetch("/api/v1/evaluacion", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+
+        if (!r.ok) throw new Error("Error del servidor (" + r.status + ")");
+
+        const j = await r.json();
+        renderResults(j);
+        estado.classList.add('hidden');
+      } catch (err) {
+        estado.className = "estado-box estado-error";
+        estado.textContent = "No se pudo completar la consulta: " + err.message;
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    function renderResults(j) {
+      // 1. Advertencias globales y de servicios
+      const todasLasAdvertencias = [
+        ...(j.advertencias || []),
+        ...(j.senamhi?.avisos || []),
+        ...(j.senace?.avisos || [])
+      ];
+
+      if (todasLasAdvertencias.length > 0) {
+        avisosContainer.innerHTML = todasLasAdvertencias
+          .map(a => `<div class="warning-item">⚠️ ${a}</div>`)
+          .join("");
+        avisosContainer.classList.remove('hidden');
+      } else {
+        avisosContainer.classList.add('hidden');
+      }
+
+      // 2. Datos de Senamhi / Clima
+      const clima = j.senamhi?.clima || {};
+      document.getElementById('res-temp').textContent = `${clima.temperatura_promedio_c ?? '--'} °C`;
+      document.getElementById('res-hum').textContent = `${clima.humedad_promedio_pct ?? '--'} %`;
+      document.getElementById('res-precip').textContent = `${clima.precipitacion_promedio_mm ?? '--'} mm`;
+
+      const estacion = j.senamhi?.estacion || {};
+      document.getElementById('res-station').textContent =
+        `Estación utilizada: ${estacion.nombre || 'No especificada'} (Distancia: ${estacion.distancia_km ?? '--'} km)`;
+
+      // 3. Proyectos SENACE (Distinguir null de lista vacía)
+      const tbody = document.getElementById('senace-tbody');
+      const table = document.getElementById('senace-table');
+      const emptyMsg = document.getElementById('senace-empty');
+      const unavailableMsg = document.getElementById('senace-unavailable');
+
+      tbody.innerHTML = '';
+      table.classList.add('hidden');
+      emptyMsg.classList.add('hidden');
+      unavailableMsg.classList.add('hidden');
+
+      if (j.senace === null) {
+        unavailableMsg.classList.remove('hidden');
+      } else {
+        const proyectos = j.senace?.proyectos || [];
+        if (proyectos.length === 0) {
+          emptyMsg.classList.remove('hidden');
+        } else {
+          table.classList.remove('hidden');
+          proyectos.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${p.titulo_proyecto || '-'}</td>
+              <td>${p.titular || '-'}</td>
+              <td><span class="badge">${p.estado || '-'}</span></td>
+              <td>${p.fecha_inicio || '-'}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      }
+
+      resultsSection.classList.remove('hidden');
+    }
   </script>
 </body>
+
 </html>
